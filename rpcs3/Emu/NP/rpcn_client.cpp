@@ -300,7 +300,8 @@ namespace rpcn
 		case rpcn::ErrorType::Unsupported: return "An unsupported operation was attempted!";
 		}
 
-		fmt::throw_exception("Unknown error returned: %d", static_cast<u8>(error));
+		rpcn_log.error("Unknown error returned: %d", static_cast<u8>(error));
+		return "Unknown error!";
 	}
 
 	void print_error(rpcn::CommandType command, rpcn::ErrorType error)
@@ -653,7 +654,9 @@ namespace rpcn
 			// Internal commands without feedback
 			if (command == CommandType::ResetState)
 			{
-				ensure(data[0] == static_cast<u8>(ErrorType::NoError));
+				if (data[0] != static_cast<u8>(ErrorType::NoError))
+					return error_and_disconnect("Failed to reset state!");
+
 				break;
 			}
 
@@ -2147,7 +2150,7 @@ namespace rpcn
 			pb_req.add_dst()->set_value(req->dst.multicastTargetTeamId);
 			break;
 		default:
-			ensure(false);
+			rpcn_log.error("send_room_message: unexpected castType(%d)", req->castType);
 			break;
 		}
 
@@ -2629,15 +2632,23 @@ namespace rpcn
 					private_slots = cur_attr->value.num;
 					break;
 				case SCE_NP_MATCHING_ROOM_ATTR_ID_PRIVILEGE_TYPE:
-					ensure(cur_attr->value.num == SCE_NP_MATCHING_ROOM_PRIVILEGE_TYPE_NO_AUTO_GRANT || cur_attr->value.num == SCE_NP_MATCHING_ROOM_PRIVILEGE_TYPE_AUTO_GRANT, "Invalid SCE_NP_MATCHING_ROOM_ATTR_ID_PRIVILEGE_TYPE value");
+					if (cur_attr->value.num != SCE_NP_MATCHING_ROOM_PRIVILEGE_TYPE_NO_AUTO_GRANT && cur_attr->value.num != SCE_NP_MATCHING_ROOM_PRIVILEGE_TYPE_AUTO_GRANT)
+					{
+						rpcn_log.error("createjoin_room_gui: invalid SCE_NP_MATCHING_ROOM_ATTR_ID_PRIVILEGE_TYPE value(%d), ignoring it", cur_attr->value.num);
+						break;
+					}
 					privilege_grant = (cur_attr->value.num == SCE_NP_MATCHING_ROOM_PRIVILEGE_TYPE_AUTO_GRANT);
 					break;
 				case SCE_NP_MATCHING_ROOM_ATTR_ID_ROOM_SEARCH_FLAG:
-					ensure(cur_attr->value.num == SCE_NP_MATCHING_ROOM_SEARCH_FLAG_OPEN || cur_attr->value.num == SCE_NP_MATCHING_ROOM_SEARCH_FLAG_STEALTH, "Invalid SCE_NP_MATCHING_ROOM_ATTR_ID_ROOM_SEARCH_FLAG value");
+					if (cur_attr->value.num != SCE_NP_MATCHING_ROOM_SEARCH_FLAG_OPEN && cur_attr->value.num != SCE_NP_MATCHING_ROOM_SEARCH_FLAG_STEALTH)
+					{
+						rpcn_log.error("createjoin_room_gui: invalid SCE_NP_MATCHING_ROOM_ATTR_ID_ROOM_SEARCH_FLAG value(%d), ignoring it", cur_attr->value.num);
+						break;
+					}
 					stealth = (cur_attr->value.num == SCE_NP_MATCHING_ROOM_SEARCH_FLAG_STEALTH);
 					break;
 				default:
-					fmt::throw_exception("Invalid basic num attribute id");
+					rpcn_log.error("createjoin_room_gui: invalid basic num attribute id(%d), ignoring it", cur_attr->id);
 					break;
 				}
 
@@ -2645,8 +2656,17 @@ namespace rpcn
 			}
 			case SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN:
 			{
-				ensure(cur_attr->id >= 1u && cur_attr->id <= 16u, "Invalid game bin attribute id");
-				ensure(cur_attr->value.data.size <= 64u || ((cur_attr->id == 1u || cur_attr->id == 2u) && cur_attr->value.data.size <= 256u), "Invalid game bin size");
+				if (cur_attr->id < 1u || cur_attr->id > 16u)
+				{
+					rpcn_log.error("createjoin_room_gui: invalid game bin attribute id(%d), ignoring it", cur_attr->id);
+					break;
+				}
+
+				if (cur_attr->value.data.size > 64u && !((cur_attr->id == 1u || cur_attr->id == 2u) && cur_attr->value.data.size <= 256u))
+				{
+					rpcn_log.error("createjoin_room_gui: invalid game bin size(%d) for attribute id(%d), ignoring it", cur_attr->value.data.size, cur_attr->id);
+					break;
+				}
 
 				auto* attr = pb_req.add_game_attrs();
 				attr->set_attr_type(cur_attr->type);
@@ -2657,7 +2677,11 @@ namespace rpcn
 			}
 			case SCE_NP_MATCHING_ATTR_TYPE_GAME_NUM:
 			{
-				ensure(cur_attr->id >= 1u && cur_attr->id <= 16u, "Invalid game num attribute id");
+				if (cur_attr->id < 1u || cur_attr->id > 16u)
+				{
+					rpcn_log.error("createjoin_room_gui: invalid game num attribute id(%d), ignoring it", cur_attr->id);
+					break;
+				}
 
 				auto* attr = pb_req.add_game_attrs();
 				attr->set_attr_type(cur_attr->type);
@@ -2666,7 +2690,8 @@ namespace rpcn
 				break;
 			}
 			default:
-				fmt::throw_exception("Invalid attribute type");
+				rpcn_log.error("createjoin_room_gui: invalid attribute type(%d), ignoring it", cur_attr->type);
+				break;
 			}
 		}
 
@@ -2761,23 +2786,23 @@ namespace rpcn
 
 		for (auto cur_attr = attrs; cur_attr; cur_attr = cur_attr->next)
 		{
+			if (cur_attr->type != SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN && cur_attr->type != SCE_NP_MATCHING_ATTR_TYPE_GAME_NUM)
+			{
+				rpcn_log.error("set_room_info_gui: invalid attr type(%d), ignoring it", cur_attr->type);
+				continue;
+			}
+
 			auto* pb_attr = pb_req.add_attr();
 			pb_attr->set_attr_type(cur_attr->type);
 			pb_attr->set_attr_id(cur_attr->id);
 
-			switch (cur_attr->type)
-			{
-			case SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN:
+			if (cur_attr->type == SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN)
 			{
 				pb_attr->set_data(cur_attr->value.data.ptr.get_ptr(), cur_attr->value.data.size);
-				break;
 			}
-			case SCE_NP_MATCHING_ATTR_TYPE_GAME_NUM:
+			else
 			{
 				pb_attr->set_num(cur_attr->value.num);
-				break;
-			}
-			default: fmt::throw_exception("Invalid attr type reached set_room_info_gui");
 			}
 		}
 

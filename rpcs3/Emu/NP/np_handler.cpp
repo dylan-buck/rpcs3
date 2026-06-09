@@ -1124,7 +1124,11 @@ namespace np
 					std::vector<u8>& data = reply.second.second;
 
 					// Every reply should at least contain a return value/error code
-					ensure(data.size() >= 1);
+					if (data.empty())
+					{
+						nph_log.error("Empty reply (command %d, req_id %d) received, ignoring it!", static_cast<u16>(command), req_id);
+						continue;
+					}
 					const auto error = static_cast<rpcn::ErrorType>(data[0]);
 					vec_stream reply_data(data, 1);
 
@@ -1177,7 +1181,7 @@ namespace np
 					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, error, reply_data); break;
-					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
+					default: nph_log.error("Unknown reply(%d) received, ignoring it!", static_cast<u16>(command)); break;
 					}
 				}
 
@@ -1201,7 +1205,7 @@ namespace np
 					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(noti_data); break;
 					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(noti_data); break;
 					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(noti_data); break;
-					default: fmt::throw_exception("Unknown notification(%d) received!", notif.first); break;
+					default: nph_log.error("Unknown notification(%d) received, ignoring it!", static_cast<u16>(notif.first)); break;
 					}
 				}
 

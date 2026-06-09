@@ -23,7 +23,11 @@ namespace np
 			return;
 		}
 
-		ensure(notification->has_update_info());
+		if (!notification->has_update_info())
+		{
+			rpcn_log.error("Received UserJoinedRoom notification without update_info");
+			return;
+		}
 
 		const u32 event_key = get_event_key();
 		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
@@ -286,7 +290,13 @@ namespace np
 
 		// Should the callback signaled depend on the room id and should we track if the context is the one that created/joined/left/etc the room?
 		auto ctx = get_matching_context(gui_notifications.current_gui_ctx_id);
-		ensure(ctx);
+
+		if (!ctx)
+		{
+			rpcn_log.error("Matching context %d not found in %s notification", gui_notifications.current_gui_ctx_id, name);
+			return;
+		}
+
 		const u32 req_id = gui_notifications.counter_req_id++;
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoomStatus_SIZE), sizeof(SceNpMatchingRoomStatus), MAX_SceNpMatchingRoomStatus_SIZE);
@@ -315,8 +325,9 @@ namespace np
 			gui_cache.del_room(room_status->id);
 			break;
 		default:
-			fmt::throw_exception("Unexpected notification type in generic_gui_notification_handler: 0x%08X", notification_type);
-			break;
+			rpcn_log.error("Unexpected notification type in generic_gui_notification_handler: 0x%08X", notification_type);
+			np_memory.free(edata.addr());
+			return;
 		}
 
 		gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = notification_type, .edata = std::move(edata)});
@@ -369,14 +380,16 @@ namespace np
 
 		extra_nps::print_SceNpMatchingJoinedRoomInfo(room_info);
 
-		if (!pending_quickmatching.contains(room_info->room_status.id))
+		const auto pending_qm = pending_quickmatching.find(room_info->room_status.id);
+
+		if (pending_qm == pending_quickmatching.end())
 		{
 			np_memory.free(edata.addr());
 			return;
 		}
 
-		const u32 ctx_id = ::at32(pending_quickmatching, room_info->room_status.id);
-		ensure(pending_quickmatching.erase(room_info->room_status.id) == 1);
+		const u32 ctx_id = pending_qm->second;
+		pending_quickmatching.erase(pending_qm);
 
 		auto ctx = get_matching_context(ctx_id);
 
