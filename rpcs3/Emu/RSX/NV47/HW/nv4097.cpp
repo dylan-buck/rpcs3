@@ -721,7 +721,11 @@ namespace rsx
 				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
-			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
+			// The fast path writes the label before the pipeline has actually consumed the textures it gates.
+			// Games that immediately reuse the texture memory after acquiring the semaphore (e.g. dynamic UI
+			// texture streaming while hosting netplay matches) race the RSX backend and can desync or hang.
+			// Strict Texture Read Semaphores forces the correct full flush without the rest of strict mode.
+			if (g_cfg.video.strict_rendering_mode || g_cfg.video.strict_texture_read_semaphores) [[ unlikely ]]
 			{
 				util::write_gcm_label<true, true>(ctx, reg, addr, arg);
 			}
