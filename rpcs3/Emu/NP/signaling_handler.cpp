@@ -520,7 +520,11 @@ signaling_handler& signaling_handler::operator=(thread_state)
 
 void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
-	ensure(si);
+	if (!si)
+	{
+		sign_log.error("update_si_addr: null signaling_info");
+		return;
+	}
 
 	if (si->addr != new_addr || si->port != new_port)
 	{
@@ -545,7 +549,11 @@ void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 
 
 void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
-	ensure(si);
+	if (!si)
+	{
+		sign_log.error("update_si_mapped_addr: null signaling_info");
+		return;
+	}
 
 	// If the address given to us by op is a translation IP, just replace it with our public ip(v4)
 	if (np::is_ipv6_supported() && np::ip_address_translator::is_ipv6(new_addr))

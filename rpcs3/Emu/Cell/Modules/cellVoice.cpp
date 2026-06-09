@@ -190,7 +190,9 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 		}
 	}
 
-	fmt::throw_exception("Unreachable");
+	// All candidate port ids for this creation counter are taken
+	cellVoice.error("cellVoiceCreatePort: no free port id");
+	return CELL_VOICE_ERROR_RESOURCE_INSUFFICIENT;
 }
 
 error_code cellVoiceDeletePort(u32 portId)

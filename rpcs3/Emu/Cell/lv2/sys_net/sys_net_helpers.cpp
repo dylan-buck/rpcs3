@@ -96,7 +96,12 @@ sys_net_error convert_error(bool is_blocking, int native_error, [[maybe_unused]]
 		break;
 #endif
 	default:
-		fmt::throw_exception("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
+		// Host OSes can produce errnos outside the list above (e.g. EPERM from a
+		// Linux firewall REJECT rule on UDP sends). Map them to a generic error
+		// the game can handle instead of aborting emulation.
+		sys_net.error("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error, mapped to SYS_NET_ECONNABORTED", is_blocking, native_error);
+		result = SYS_NET_ECONNABORTED;
+		break;
 	}
 
 #ifdef _WIN32

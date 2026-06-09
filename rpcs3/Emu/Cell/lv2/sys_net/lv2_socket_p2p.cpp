@@ -273,9 +273,23 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 		lock.lock();
 	}
 
-	ensure(opt_sn_addr);
-	ensure(native_socket); // ensures it has been bound
-	ensure(buf.size() <= static_cast<usz>(65535 - VPORT_P2P_HEADER_SIZE)); // catch games using full payload for future fragmentation implementation if necessary
+	if (!opt_sn_addr)
+	{
+		sys_net.error("lv2_socket_p2p::sendto: no address given");
+		return {-SYS_NET_EDESTADDRREQ};
+	}
+
+	if (!native_socket) // not bound yet
+	{
+		sys_net.error("lv2_socket_p2p::sendto: socket is not bound");
+		return {-SYS_NET_ENOTCONN};
+	}
+
+	if (buf.size() > static_cast<usz>(65535 - VPORT_P2P_HEADER_SIZE)) // catch games using full payload for future fragmentation implementation if necessary
+	{
+		sys_net.error("lv2_socket_p2p::sendto: datagram too large (%d)", buf.size());
+		return {-SYS_NET_EMSGSIZE};
+	}
 	const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(&*opt_sn_addr)->sin_port;
 	const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&*opt_sn_addr)->sin_vport;
 
