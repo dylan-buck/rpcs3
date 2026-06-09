@@ -89,7 +89,8 @@ namespace np
 		}
 		else
 		{
-			fmt::throw_exception("Received ip address with size = %d", ip_bytes.size());
+			IPv6_log.error("Received ip address with size = %d, ignoring it", ip_bytes.size());
+			return 0;
 		}
 	}
 

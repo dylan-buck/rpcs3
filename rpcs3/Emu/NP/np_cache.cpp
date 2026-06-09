@@ -181,14 +181,6 @@ namespace np
 
 		switch (sort_method)
 		{
-		case SCE_NP_MATCHING2_SORT_METHOD_SLOT_NUMBER:
-		{
-			for (const auto& member : room.members)
-			{
-				vec_memberids.push_back(member.first);
-			}
-			break;
-		}
 		case SCE_NP_MATCHING2_SORT_METHOD_JOIN_DATE:
 		{
 			std::map<u64, u16> map_joindate_id;
@@ -205,7 +197,17 @@ namespace np
 
 			break;
 		}
-		default: fmt::throw_exception("Unreachable");
+		default:
+			np_cache.error("get_memberids: unexpected sort_method(%d), defaulting to slot number ordering", sort_method);
+			[[fallthrough]];
+		case SCE_NP_MATCHING2_SORT_METHOD_SLOT_NUMBER:
+		{
+			for (const auto& member : room.members)
+			{
+				vec_memberids.push_back(member.first);
+			}
+			break;
+		}
 		}
 
 		return {CELL_OK, vec_memberids};
