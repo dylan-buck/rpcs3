@@ -967,6 +967,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="strictTextureReadSemaphores">
+                 <property name="text">
+                  <string>Strict Texture Read Semaphores</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="stretchToDisplayArea">
                  <property name="text">
                   <string>Stretch To Display Area</string>

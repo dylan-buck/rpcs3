@@ -75,6 +75,7 @@ enum class emu_settings_type
 	VulkanAdapter,
 	ForceHighpZ,
 	StrictRenderingMode,
+	StrictTextureReadSemaphores,
 	FramebufferAliasingBias,
 	DisableVertexCache,
 	DisableOcclusionQueries,

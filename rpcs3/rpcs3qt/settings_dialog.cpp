@@ -628,6 +628,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictModeRendering, emu_settings_type::StrictRenderingMode);
 	SubscribeTooltip(ui->strictModeRendering, tooltips.settings.strict_rendering_mode);
+
+	m_emu_settings->EnhanceCheckBox(ui->strictTextureReadSemaphores, emu_settings_type::StrictTextureReadSemaphores);
 	const auto on_strict_rendering_mode = [this](bool checked)
 	{
 		ui->gb_resolutionScale->setEnabled(!checked);

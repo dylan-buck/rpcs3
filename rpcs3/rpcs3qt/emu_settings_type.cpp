@@ -80,6 +80,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::StretchToDisplayArea,       get_cfg_location(local_cfg.video.stretch_to_display_area) },
 	{ emu_settings_type::ForceHighpZ,                get_cfg_location(local_cfg.video.force_high_precision_z_buffer) },
 	{ emu_settings_type::StrictRenderingMode,        get_cfg_location(local_cfg.video.strict_rendering_mode) },
+	{ emu_settings_type::StrictTextureReadSemaphores, get_cfg_location(local_cfg.video.strict_texture_read_semaphores) },
 	{ emu_settings_type::FramebufferAliasingBias,    get_cfg_location(local_cfg.video.fb_aliasing_bias) },
 	{ emu_settings_type::DisableVertexCache,         get_cfg_location(local_cfg.video.disable_vertex_cache) },
 	{ emu_settings_type::DisableOcclusionQueries,    get_cfg_location(local_cfg.video.disable_zcull_queries) },
